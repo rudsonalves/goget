@@ -72,8 +72,15 @@ func isFile(fileName string) bool {
 }
 
 // updateList update a list o packages
-func updateList(pkgList []string) {
+func updateList(fileName string) {
+	if !isFile(fileName) {
+		fmt.Println("List of packages not found!")
+		return
+	}
+
+	pkgList := readFile(fileName)
 	r, _ := regexp.Compile("^#")
+
 	for _, line := range pkgList {
 		if !r.MatchString(line) {
 			execLine := cmd_goget + " " + line
@@ -155,21 +162,41 @@ func addNewPkg(fileName string, addPkg string) error {
 	return nil
 }
 
-// func printList(list []string) {
-// 	for _, line := range list {
-// 		fmt.Println(line)
-// 	}
-// }
+func printList(list []string) {
+	for _, line := range list {
+		fmt.Println(line)
+	}
+}
+
+func findGogetList() (string, error) {
+	home := os.Getenv("HOME")
+	gopath := os.Getenv("GOPATH")
+	path := []string{
+		home + "/.config/goget.list",
+		gopath + "/cfg/goget.list",
+	}
+
+	for _, p := range path {
+		if isFile(p) {
+			return p, nil
+		}
+	}
+	return path[0], fmt.Errorf("list of packages not found")
+}
 
 func main() {
 	var (
-		gogetList  = os.Getenv("HOME") + "/.config/goget.list"
 		addPkg     string
 		remPkg     string
 		updateFlag bool
 		cleanFlag  bool
 		helpFlag   bool
 	)
+
+	gogetList, err := findGogetList()
+	if err != nil {
+		fmt.Printf("A new %s file is be created!", gogetList)
+	}
 
 	flag.StringVar(&addPkg, "add", "", "add package to list")
 	flag.StringVar(&addPkg, "a", "", "add package to list (shorthand)")
@@ -185,18 +212,15 @@ func main() {
 
 	if helpFlag {
 		showHelp()
-		return
-	} else if updateFlag {
-		if isFile(gogetList) {
-			pkgs := readFile(gogetList)
-			updateList(pkgs)
-		} else {
-			fmt.Println("List of packages not found!")
-		}
-		return
-	} else if cleanFlag {
+		os.Exit(0)
+	}
+
+	if cleanFlag {
 		cleanList(gogetList)
-		return
+	}
+
+	if updateFlag {
+		updateList(gogetList)
 	}
 
 	if addPkg != "" {
