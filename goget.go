@@ -84,8 +84,13 @@ func updateList(fileName string) {
 	for _, line := range pkgList {
 		if !r.MatchString(line) {
 			execLine := cmd_goget + " " + line
+			cmdSplit := strings.Split(execLine, " ")
+			cmd := exec.Command(cmdSplit[0], cmdSplit[1:]...)
+
 			fmt.Printf("Runing: %s\n", execLine)
-			exec.Command(execLine)
+			if err := cmd.Run(); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
